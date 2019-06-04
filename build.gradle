@@ -3,6 +3,7 @@ buildscript {
     repositories {
         jcenter()
         google()
+        mavenLocal()
     }
 
     // Define versions in a single place
@@ -42,6 +43,8 @@ buildscript {
     dependencies {
         classpath "com.android.tools.build:gradle:$gradleVersion"
 
+//        classpath 'com.novoda:bintray-release:0.8.1'
+
         // Google Service Plugin
 //        classpath "com.google.gms:google-services:$googleServiceVersion"
 
@@ -54,22 +57,32 @@ allprojects {
     repositories {
         google()
         jcenter()
+        mavenLocal()
     }
 }
 
 
 apply plugin: 'com.android.library'
+apply plugin: 'maven-publish'
+//apply plugin: 'com.novoda.bintray-release'
+
+def versionMajor = 1
+def versionMinor = 0
+def versionPatch = 0
+
+def libraryGroupId = 'com.jommobile.android'
+def libraryBaseName = 'jomutils'
+def libraryVersion = "${versionMajor}.${versionMinor}.${versionPatch}" // release version
 
 android {
     compileSdkVersion 28
 
-
-
     defaultConfig {
         minSdkVersion 19
         targetSdkVersion 28
-        versionCode 1
-        versionName "1.0"
+
+        versionCode versionMajor * 10000 + versionMinor * 1000 + versionPatch * 100
+        versionName "${versionMajor}.${versionMinor}.${versionPatch}"
 
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
@@ -96,6 +109,10 @@ android {
         exclude 'META-INF/NOTICE.txt'
         exclude 'META-INF/notice.txt'
         exclude 'META-INF/ASL2.0'
+    }
+
+    lintOptions {
+        abortOnError false
     }
 
     // Data binding
@@ -135,3 +152,45 @@ dependencies {
     androidTestImplementation "androidx.test:runner:$rootProject.runnerVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$rootProject.espressoVersion"
 }
+
+// Maven Publication (https://docs.gradle.org/current/userguide/publishing_maven.html#publishing_maven:publications)
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId = libraryGroupId
+            artifactId = libraryBaseName
+            version = libraryVersion
+        }
+    }
+}
+
+// ====== Maven Local Repository : $ gradlew.bat build publishToMavenLocal
+// ====== Maven Central Repository : TODO
+
+
+// ======== MAVEN DEPLOY to local cache or nexus repo (to make accessible to local projects) (command: ./gradlew clean aRel uploadArchives) ========
+//uploadArchives {
+//    repositories {
+//        // deploy to local
+//        mavenDeployer {
+//            repository (url: "file://${System.env.HOME}/.m2/repository/")
+//            pom.groupId = libraryGroupId
+//            pom.artifactId = libraryBaseName
+//            pom.version = libraryVersion //Normally I would append "-SNAPSHOT" but newer gradle/maven can't always find them
+//            pom.packaging = 'aar'
+//            // uniqueVersion = false // don't put in a timestamp on the filename (other project will not be able to depend on it)
+//        }
+//    }
+//}
+
+// ======= BINTRAY DEPLOY (command: $ ./gradlew clean build bintrayUpload -PbintrayUser=BINTRAY_USERNAME -PbintrayKey=BINTRAY_KEY -PdryRun=false) ====
+//publish {
+//    userOrg = ""
+//    groupId = libraryGroupId
+//    artifactId = libraryBaseName
+//    uploadName = 'PlaylistCore'
+//    publishVersion = libraryVersion
+//    desc = ""
+//    autoPublish = false
+//    dryRun = false
+//}
