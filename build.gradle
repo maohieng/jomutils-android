@@ -54,7 +54,7 @@ buildscript {
 //        classpath "com.google.cloud.tools:endpoints-framework-gradle-plugin:$endpointsVersion"
 
         // android-maven-publish [https://github.com/wupdigital/android-maven-publish]
-        classpath 'digital.wup:android-maven-publish:3.6.2'
+//        classpath 'digital.wup:android-maven-publish:3.6.2'
     }
 }
 
@@ -68,11 +68,11 @@ allprojects {
 
 apply plugin: 'com.android.library'
 apply plugin: 'maven-publish'
-apply plugin: 'digital.wup.android-maven-publish'
+//apply plugin: 'digital.wup.android-maven-publish'
 
 def versionMajor = 1
 def versionMinor = 0
-def versionPatch = 1
+def versionPatch = 2
 
 def libraryGroupId = 'com.jommobile.android'
 def libraryBaseName = 'jomutils'
@@ -158,21 +158,21 @@ dependencies {
 }
 
 
-task androidJavadocs(type: Javadoc) {
-    source = android.sourceSets.main.java.srcDirs
-    classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
-    android.libraryVariants.all { variant ->
-        if (variant.name == 'release') {
-            owner.classpath += variant.javaCompile.classpath
-        }
-    }
-    exclude '**/R.html', '**/R.*.html', '**/index.html'
-}
+//task androidJavadocs(type: Javadoc) {
+//    source = android.sourceSets.main.java.srcDirs
+//    classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
+//    android.libraryVariants.all { variant ->
+//        if (variant.name == 'release') {
+//            owner.classpath += variant.javaCompile.classpath
+//        }
+//    }
+//    exclude '**/R.html', '**/R.*.html', '**/index.html'
+//}
 
-task androidJavadocsJar(type: Jar, dependsOn: androidJavadocs) {
-    classifier = 'javadoc'
-    from androidJavadocs.destinationDir
-}
+//task androidJavadocsJar(type: Jar, dependsOn: androidJavadocs) {
+//    classifier = 'javadoc'
+//    from androidJavadocs.destinationDir
+//}
 
 task androidSourcesJar(type: Jar) {
     classifier = 'sources'
@@ -180,90 +180,92 @@ task androidSourcesJar(type: Jar) {
 }
 
 // Maven Publication (https://docs.gradle.org/current/userguide/publishing_maven.html#publishing_maven:publications)
-publishing {
-    publications {
+project.afterEvaluate {
+    publishing {
+        publications {
 
-        // This works! using [https://github.com/wupdigital/android-maven-publish]
-        android.libraryVariants.all { variant ->
-            "maven${variant.name.capitalize()}Aar"(MavenPublication) {
-                from components.findByName("android${variant.name.capitalize()}")
+            // This works! using [https://github.com/wupdigital/android-maven-publish]
+//        android.libraryVariants.all { variant ->
+//            "maven${variant.name.capitalize()}Aar"(MavenPublication) {
+//                from components.findByName("android${variant.name.capitalize()}")
+//                groupId libraryGroupId
+//                artifactId libraryBaseName
+//                version libraryVersion
+//            }
+//        }
+
+            // Copy from [https://gist.github.com/Robyer/a6578e60127418b380ca133a1291f017]
+            maven(MavenPublication) {
                 groupId libraryGroupId
                 artifactId libraryBaseName
                 version libraryVersion
+
+                artifact bundleReleaseAar
+//                artifact androidJavadocsJar
+                artifact androidSourcesJar
+
+                // Customize the generated POM
+                pom {
+                    name = 'Android JomUtils'
+                    description = 'An utilities project for developing Android.'
+                    url = 'https://github.com/maohieng/jomutils-android'
+                    licenses {
+                        license {
+                            name = 'The Apache License, Version 2.0'
+                            url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                        }
+                    }
+                    developers {
+                        developer {
+                            id = 'maohieng'
+                            name = 'MAO Hieng'
+                            email = 'maohieng@gmail.com'
+                        }
+                    }
+                    scm {
+                        connection = 'scm:git:git://github.com/maohieng/jomutils-android.git'
+                        developerConnection = 'scm:git:ssh://github.com/maohieng/jomutils-android.git'
+                        url = 'https://github.com/maohieng/jomutils-android'
+                    }
+                }
+
+                pom.withXml {
+                    final dependenciesNode = asNode().appendNode('dependencies')
+
+                    ext.addDependency = { Dependency dep, String scope ->
+                        if (dep.group == null || dep.version == null || dep.name == null || dep.name == "unspecified")
+                            return // ignore invalid dependencies
+
+                        final dependencyNode = dependenciesNode.appendNode('dependency')
+                        dependencyNode.appendNode('groupId', dep.group)
+                        dependencyNode.appendNode('artifactId', dep.name)
+                        dependencyNode.appendNode('version', dep.version)
+                        dependencyNode.appendNode('scope', scope)
+
+                        if (!dep.transitive) {
+                            // If this dependency is transitive, we should force exclude all its dependencies them from the POM
+                            final exclusionNode = dependencyNode.appendNode('exclusions').appendNode('exclusion')
+                            exclusionNode.appendNode('groupId', '*')
+                            exclusionNode.appendNode('artifactId', '*')
+                        } else if (!dep.properties.excludeRules.empty) {
+                            // Otherwise add specified exclude rules
+                            final exclusionNode = dependencyNode.appendNode('exclusions').appendNode('exclusion')
+                            dep.properties.excludeRules.each { ExcludeRule rule ->
+                                exclusionNode.appendNode('groupId', rule.group ?: '*')
+                                exclusionNode.appendNode('artifactId', rule.module ?: '*')
+                            }
+                        }
+                    }
+
+                    // List all "compile" dependencies (for old Gradle)
+                    configurations.compile.getDependencies().each { dep -> addDependency(dep, "compile") }
+                    // List all "api" dependencies (for new Gradle) as "compile" dependencies
+                    configurations.api.getDependencies().each { dep -> addDependency(dep, "compile") }
+                    // List all "implementation" dependencies (for new Gradle) as "runtime" dependencies
+                    configurations.implementation.getDependencies().each { dep -> addDependency(dep, "runtime") }
+                }
             }
         }
-
-        // Copy from [https://gist.github.com/Robyer/a6578e60127418b380ca133a1291f017]
-//        maven(MavenPublication) {
-//            groupId libraryGroupId
-//            artifactId libraryBaseName
-//            version libraryVersion
-//
-//            artifact bundleReleaseAar
-//            artifact androidJavadocsJar
-//            artifact androidSourcesJar
-//
-//            // Customize the generated POM
-//            pom {
-//                name = 'Android JomUtils'
-//                description = 'An utilities project for developing Android.'
-//                url = 'https://github.com/maohieng/jomutils-android'
-//                licenses {
-//                    license {
-//                        name = 'The Apache License, Version 2.0'
-//                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
-//                    }
-//                }
-//                developers {
-//                    developer {
-//                        id = 'maohieng'
-//                        name = 'MAO Hieng'
-//                        email = 'maohieng@gmail.com'
-//                    }
-//                }
-//                scm {
-//                    connection = 'scm:git:git://github.com/maohieng/jomutils-android.git'
-//                    developerConnection = 'scm:git:ssh://github.com/maohieng/jomutils-android.git'
-//                    url = 'https://github.com/maohieng/jomutils-android'
-//                }
-//            }
-//
-//            pom.withXml {
-//                final dependenciesNode = asNode().appendNode('dependencies')
-//
-//                ext.addDependency = { Dependency dep, String scope ->
-//                    if (dep.group == null || dep.version == null || dep.name == null || dep.name == "unspecified")
-//                        return // ignore invalid dependencies
-//
-//                    final dependencyNode = dependenciesNode.appendNode('dependency')
-//                    dependencyNode.appendNode('groupId', dep.group)
-//                    dependencyNode.appendNode('artifactId', dep.name)
-//                    dependencyNode.appendNode('version', dep.version)
-//                    dependencyNode.appendNode('scope', scope)
-//
-//                    if (!dep.transitive) {
-//                        // If this dependency is transitive, we should force exclude all its dependencies them from the POM
-//                        final exclusionNode = dependencyNode.appendNode('exclusions').appendNode('exclusion')
-//                        exclusionNode.appendNode('groupId', '*')
-//                        exclusionNode.appendNode('artifactId', '*')
-//                    } else if (!dep.properties.excludeRules.empty) {
-//                        // Otherwise add specified exclude rules
-//                        final exclusionNode = dependencyNode.appendNode('exclusions').appendNode('exclusion')
-//                        dep.properties.excludeRules.each { ExcludeRule rule ->
-//                            exclusionNode.appendNode('groupId', rule.group ?: '*')
-//                            exclusionNode.appendNode('artifactId', rule.module ?: '*')
-//                        }
-//                    }
-//                }
-//
-//                // List all "compile" dependencies (for old Gradle)
-//                configurations.compile.getDependencies().each { dep -> addDependency(dep, "compile") }
-//                // List all "api" dependencies (for new Gradle) as "compile" dependencies
-//                configurations.api.getDependencies().each { dep -> addDependency(dep, "compile") }
-//                // List all "implementation" dependencies (for new Gradle) as "runtime" dependencies
-//                configurations.implementation.getDependencies().each { dep -> addDependency(dep, "runtime") }
-//            }
-//        }
     }
 }
 // ====== Maven Local Repository : $ gradlew.bat build publishToMavenLocal

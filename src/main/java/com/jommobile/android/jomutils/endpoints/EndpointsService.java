@@ -10,9 +10,21 @@ import com.jommobile.android.jomutils.AppExecutors;
  */
 public abstract class EndpointsService<C extends AbstractGoogleJsonClient> {
 
-    protected abstract AppExecutors getAppExecutors();
+    private final AppExecutors mExecutors;
+    private final C mClient;
 
-    protected abstract C getApiClient();
+    protected EndpointsService(AppExecutors executors, C endpointsClients) {
+        mExecutors = executors;
+        mClient = endpointsClients;
+    }
+
+    protected AppExecutors getAppExecutors(){
+        return mExecutors;
+    }
+
+    protected C getEndpointsClient() {
+        return mClient;
+    }
 
     protected <T> Promise.Builder<T> createPromiseBuilder() {
         return new PromiseImp.BuilderImpl<>(getAppExecutors());
