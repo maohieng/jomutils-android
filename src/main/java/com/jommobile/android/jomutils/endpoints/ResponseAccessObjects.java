@@ -34,7 +34,7 @@ public final class ResponseAccessObjects {
         return img;
     }
 
-    public static Object createInnerModel(Class<?> innerModelClass, Object innerRespObj) throws InstantiationException, IllegalAccessException, NoSuchMethodException, InvocationTargetException {
+    public static Object createInnerClientObject(Class<?> innerModelClass, Object innerRespObj) throws InstantiationException, IllegalAccessException, NoSuchMethodException, InvocationTargetException {
         Class<?> innerRespClass = innerRespObj.getClass();
 
         Object innerModelObj = innerModelClass.newInstance();
@@ -53,6 +53,11 @@ public final class ResponseAccessObjects {
         return innerModelObj;
     }
 
+    @Deprecated
+    public static Object createInnerModel(Class<?> innerModelClass, Object innerRespObj) throws InstantiationException, IllegalAccessException, NoSuchMethodException, InvocationTargetException {
+        return createInnerClientObject(innerModelClass, innerRespObj);
+    }
+
     public static <M> M createImageResponse(Class<M> imgResponseClass, Image imageModel) throws InstantiationException, IllegalAccessException, NoSuchMethodException, InvocationTargetException {
         M image = imgResponseClass.newInstance();
         imgResponseClass.getMethod("setLink", String.class).invoke(image, imageModel.getImage());
@@ -61,8 +66,10 @@ public final class ResponseAccessObjects {
         return image;
     }
 
+    // TODO: 6/10/2019 change method name to createClientModel
+
     @SuppressWarnings("unchecked")
-    public static <R extends GenericJson, M extends BaseEntity> M createModel(Class<M> modelClass, R resp, Class<?>... innerTypes) {
+    public static <R extends GenericJson, M extends BaseEntity> M createClientObject(Class<M> modelClass, R resp, Class<?>... innerTypes) {
         final Class<R> rClass = (Class<R>) resp.getClass();
 
         M model = null;
@@ -132,6 +139,11 @@ public final class ResponseAccessObjects {
         return model;
     }
 
+    @Deprecated
+    public static <R extends GenericJson, M extends BaseEntity> M createModel(Class<M> modelClass, R resp, Class<?>... innerTypes) {
+        return createClientObject(modelClass, resp, innerTypes);
+    }
+
     @SuppressWarnings("unchecked")
     public static <R extends GenericJson, M extends BaseModel> R createResponse(Class<R> responseClass, M model, Class<?>... innerTypes) {
         // TODO: 1/11/19 need to be tested
@@ -192,12 +204,18 @@ public final class ResponseAccessObjects {
         return response;
     }
 
-    @SuppressWarnings("unchecked")
+    // TODO: 6/10/2019 remove old methods
+
+    @Deprecated
     public static <R extends GenericJson, M extends BaseEntity> List<M> createModelList(Class<M> modelClass, List<R> responses) {
+        return createClientObjectList(modelClass, responses);
+    }
+
+    public static <R extends GenericJson, M extends BaseEntity> List<M> createClientObjectList(Class<M> modelClass, List<R> responses) {
         List<M> modelList = new ArrayList<>();
 
         for (R response : responses) {
-            modelList.add(createModel(modelClass, response));
+            modelList.add(createClientObject(modelClass, response));
         }
 
         return modelList;
