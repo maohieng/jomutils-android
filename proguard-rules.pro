@@ -22,8 +22,33 @@
 
 # Needed by google-api-client to keep generic types and @Key annotations accessed via reflection
 
+# Fix for connecting appending release build
+-keepattributes Signature, Exceptions, RuntimeVisibleAnnotations,AnnotationDefault
+
 -keepclassmembers class * {
   @com.google.api.client.util.Key <fields>;
 }
 
--keepattributes Signature,RuntimeVisibleAnnotations,AnnotationDefault
+-keep class com.google.** { *;}
+-keep interface com.google.** { *;}
+-dontwarn com.google.**
+
+# Needed by google-http-client-android when linking against an older platform version
+-dontwarn com.google.api.client.extensions.android.**
+
+# Needed by google-api-client-android when linking against an older platform version
+-dontwarn com.google.api.client.googleapis.extensions.android.**
+
+# Fix for build release
+# https://github.com/krschultz/android-proguard-snippets/blob/master/libraries/proguard-guava.pro
+-dontwarn sun.misc.Unsafe
+-dontwarn java.lang.ClassValue
+-dontwarn com.google.j2objc.annotations.*
+-dontwarn org.codehaus.mojo.animal_sniffer.IgnoreJRERequirement
+
+-dontwarn com.google.common.escape.*
+-dontwarn com.google.android.gms.auth.*
+-dontwarn com.google.errorprone.annotations.*
+-dontwarn com.google.errorprone.annotations.concurrent.LazyInit
+# https://github.com/krschultz/android-proguard-snippets/blob/master/libraries/proguard-square-okio.pro
+-dontwarn java.nio.file.*

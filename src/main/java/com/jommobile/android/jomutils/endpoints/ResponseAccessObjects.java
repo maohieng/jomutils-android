@@ -3,15 +3,18 @@ package com.jommobile.android.jomutils.endpoints;
 import com.google.api.client.json.GenericJson;
 import com.google.api.client.util.DateTime;
 import com.jommobile.android.jomutils.db.BaseEntity;
+import com.jommobile.android.jomutils.db.FlavorConverter;
 import com.jommobile.android.jomutils.model.BaseModel;
-import com.jommobile.android.jomutils.model.Flavor;
 import com.jommobile.android.jomutils.model.Image;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+
+//import com.google.api.client.util.DateTime;
 
 /**
  * Response Access Object class to map, transform or create between
@@ -73,24 +76,80 @@ public final class ResponseAccessObjects {
         final Class<R> rClass = (Class<R>) resp.getClass();
 
         M model = null;
+
+        // Required fields
         try {
             model = modelClass.newInstance();
 
             Long id = (Long) rClass.getMethod("getId").invoke(resp);
-            DateTime createdDate = (DateTime) rClass.getMethod("getCreatedDate").invoke(resp);
-            DateTime modifiedDate = (DateTime) rClass.getMethod("getModifiedDate").invoke(resp);
-            String flavor = (String) rClass.getMethod("getFlavor").invoke(resp);
+
+            Object created = rClass.getMethod("getCreatedDate").invoke(resp);
+            Object modified = rClass.getMethod("getModifiedDate").invoke(resp);
+            Date createDate = null;
+            Date modifiedDate = null;
+
+            if (created instanceof DateTime) {
+                createDate = DateTimeConverter.toDate((DateTime) created);
+                modifiedDate = DateTimeConverter.toDate((DateTime) modified);
+            } else if (created instanceof String) {
+                String createdStr = (String) created;
+                if (createdStr.contains("-")) {
+                    createDate = DateTimeConverter.toDate(createdStr);
+                    modifiedDate = DateTimeConverter.toDate((String) modified);
+                } else {
+                    createDate = DateTimeConverter.toDate(Long.parseLong(createdStr));
+                    modifiedDate = DateTimeConverter.toDate(Long.parseLong((String) modified));
+                }
+            } else {
+                if (created != null) {
+                    try {
+                        createDate = DateTimeConverter.toDate((Long) created);
+                    } catch (ClassCastException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                if (modified != null) {
+                    try {
+                        modifiedDate = DateTimeConverter.toDate((Long) modified);
+                    } catch (ClassCastException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
 
             model.setId(id != null ? id : 0);
-            model.setCreatedDate(new Date(createdDate.getValue()));
-            model.setModifiedDate(new Date(modifiedDate.getValue()));
-            model.setFlavor(Flavor.of(flavor));
+            model.setCreatedDate(createDate);
+            model.setModifiedDate(modifiedDate);
             model.setSync(true);
 
         } catch (IllegalAccessException | InstantiationException | NoSuchMethodException | InvocationTargetException e) {
             e.printStackTrace();
+        } catch (ParseException e) {
+            e.printStackTrace();
         }
 
+        // Note: trying to match any fields, need to catch exceptions for each of them.
+
+        // Optional fields
+        if (model != null) {
+            String flavor = null;
+            try {
+                flavor = (String) rClass.getMethod("getFlavor").invoke(resp);
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+            } catch (InvocationTargetException e) {
+                e.printStackTrace();
+            } catch (NoSuchMethodException e) {
+                e.printStackTrace();
+            }
+
+            model.setFlavor(FlavorConverter.toFlavor(flavor));
+        }
+
+        // TODO: 6/14/2019 Check @Ignore of ROOM
+
+        // Other fields that matchable
         if (model != null) {
             Method[] methods = modelClass.getMethods();
             for (int i = 0; i < methods.length; i++) {
@@ -154,10 +213,13 @@ public final class ResponseAccessObjects {
             response = responseClass.newInstance();
 
             responseClass.getMethod("setId", Long.class).invoke(response, model.getId());
+
+            Date created = model.getCreatedDate();
             responseClass.getMethod("setCreatedDate", DateTime.class).invoke(response,
-                    model.getCreatedDate() != null ? new DateTime(model.getCreatedDate().getTime()) : (DateTime) null);
+                    created != null ? DateTimeConverter.toDateTime(created) : (DateTime) null);
+            Date modified = model.getModifiedDate();
             responseClass.getMethod("setModifiedDate", DateTime.class).invoke(response,
-                    model.getModifiedDate() != null ? new DateTime(model.getModifiedDate().getTime()) : (DateTime) null);
+                    modified != null ? DateTimeConverter.toDateTime(modified) : (DateTime) null);
 
         } catch (IllegalAccessException | InstantiationException | NoSuchMethodException | InvocationTargetException e) {
             e.printStackTrace();
