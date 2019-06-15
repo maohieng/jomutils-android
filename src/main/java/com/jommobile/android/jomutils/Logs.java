@@ -6,15 +6,20 @@ public class Logs {
 
     private static final String LOG_PREFIX = "jom_";
     private static final int LOG_PREFIX_LENGTH = LOG_PREFIX.length();
+    /**
+     * IllegalArgumentException is thrown if the tag.length() > 23
+     * for Nougat (7.0) releases (API <= 23) and prior, there is no
+     * tag limit of concern after this API level.
+     */
     private static final int MAX_LOG_TAG_LENGTH = 23;
 
     private Logs() {
     }
 
     public static String makeTag(String str) {
-//        if (str.length() > MAX_LOG_TAG_LENGTH - LOG_PREFIX_LENGTH) {
-//            return LOG_PREFIX + str.substring(0, MAX_LOG_TAG_LENGTH - LOG_PREFIX_LENGTH - 1);
-//        }
+        if (str.length() > MAX_LOG_TAG_LENGTH - LOG_PREFIX_LENGTH) {
+            return LOG_PREFIX + str.substring(0, MAX_LOG_TAG_LENGTH - LOG_PREFIX_LENGTH - 1);
+        }
 
         return LOG_PREFIX + str;
     }
