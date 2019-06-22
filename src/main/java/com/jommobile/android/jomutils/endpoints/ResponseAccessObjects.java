@@ -145,21 +145,59 @@ public final class ResponseAccessObjects {
             }
 
             model.setFlavor(FlavorConverter.toFlavor(flavor));
-        }
 
-        // TODO: 6/14/2019 Check @Ignore of ROOM
+            boolean deleted = false;
+            try {
+                deleted = !((Boolean) rClass.getMethod("getActive").invoke(resp));
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+            } catch (InvocationTargetException e) {
+                e.printStackTrace();
+            } catch (NoSuchMethodException e) {
+                try {
+                    deleted = !((Boolean) rClass.getMethod("isActive").invoke(resp));
+                } catch (IllegalAccessException e1) {
+                    e1.printStackTrace();
+                } catch (InvocationTargetException e1) {
+                    e1.printStackTrace();
+                } catch (NoSuchMethodException e1) {
+                    try {
+                        deleted = (Boolean) rClass.getMethod("isDeleted").invoke(resp);
+                    } catch (IllegalAccessException e2) {
+                        e2.printStackTrace();
+                    } catch (InvocationTargetException e2) {
+                        e2.printStackTrace();
+                    } catch (NoSuchMethodException e2) {
+                        try {
+                            deleted = (Boolean) rClass.getMethod("getDeleted").invoke(resp);
+                        } catch (IllegalAccessException e3) {
+                            e3.printStackTrace();
+                        } catch (InvocationTargetException e3) {
+                            e3.printStackTrace();
+                        } catch (NoSuchMethodException e3) {
+                            e3.printStackTrace();
+                        }
+                    }
+                }
+            }
 
-        // Other fields that matchable
-        if (model != null) {
+            model.setDeleted(deleted);
+
+
+            // Other fields that matchable
             Method[] methods = modelClass.getMethods();
             for (int i = 0; i < methods.length; i++) {
                 Method method = methods[i];
                 String name = method.getName();
                 if (name.startsWith("set")) {
-                    if (!name.equals("setId") && !name.equals("setCreatedDate")
-                            && !name.equals("setModifiedDate") && !name.equals("setFlavor")
-                            && !name.equals("setSync")) {
+                    boolean skipCheck = name.equals("setId")
+                            || name.equals("setCreatedDate")
+                            || name.equals("setModifiedDate")
+                            || name.equals("setFlavor")
+                            || name.equals("setSync")
+                            || name.equals("setDeleted");
 
+                    if (!skipCheck) {
                         final String fieldName = name.substring(3);
 
                         try {
@@ -192,7 +230,6 @@ public final class ResponseAccessObjects {
                     }
                 }
             }
-
         }
 
         return model;

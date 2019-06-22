@@ -6,6 +6,7 @@ import android.database.Cursor;
 import android.os.Parcel;
 
 import androidx.room.ColumnInfo;
+import androidx.room.Ignore;
 import androidx.room.PrimaryKey;
 
 import com.google.common.annotations.Beta;
@@ -51,6 +52,9 @@ public class BaseEntity implements BaseModel/*, Parcelable*/ {
      * Client database need to use {@link FlavorConverter} as a type converter
      */
     private Flavor flavor;
+
+    @Ignore
+    private transient boolean deleted;
 
     /**
      * Default constructor.
@@ -168,5 +172,13 @@ public class BaseEntity implements BaseModel/*, Parcelable*/ {
 
     public void setFlavor(Flavor flavor) {
         this.flavor = flavor;
+    }
+
+    public boolean isDeleted() {
+        return deleted;
+    }
+
+    public void setDeleted(boolean deleted) {
+        this.deleted = deleted;
     }
 }
