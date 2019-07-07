@@ -148,28 +148,28 @@ public final class ResponseAccessObjects {
 
             boolean deleted = false;
             try {
-                deleted = !((Boolean) rClass.getMethod("getActive").invoke(resp));
+                deleted = (Boolean) rClass.getMethod("isDeleted").invoke(resp);
             } catch (IllegalAccessException e) {
                 e.printStackTrace();
             } catch (InvocationTargetException e) {
                 e.printStackTrace();
             } catch (NoSuchMethodException e) {
                 try {
-                    deleted = !((Boolean) rClass.getMethod("isActive").invoke(resp));
+                    deleted = (Boolean) rClass.getMethod("getDeleted").invoke(resp);
                 } catch (IllegalAccessException e1) {
                     e1.printStackTrace();
                 } catch (InvocationTargetException e1) {
                     e1.printStackTrace();
                 } catch (NoSuchMethodException e1) {
                     try {
-                        deleted = (Boolean) rClass.getMethod("isDeleted").invoke(resp);
+                        deleted = !((Boolean) rClass.getMethod("getActive").invoke(resp));
                     } catch (IllegalAccessException e2) {
                         e2.printStackTrace();
                     } catch (InvocationTargetException e2) {
                         e2.printStackTrace();
                     } catch (NoSuchMethodException e2) {
                         try {
-                            deleted = (Boolean) rClass.getMethod("getDeleted").invoke(resp);
+                            deleted = !((Boolean) rClass.getMethod("isActive").invoke(resp));
                         } catch (IllegalAccessException e3) {
                             e3.printStackTrace();
                         } catch (InvocationTargetException e3) {
