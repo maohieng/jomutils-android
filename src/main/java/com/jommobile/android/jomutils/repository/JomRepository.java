@@ -1,7 +1,6 @@
 package com.jommobile.android.jomutils.repository;
 
 import com.jommobile.android.jomutils.AppExecutors;
-import com.jommobile.android.jomutils.JOMApp;
 
 /**
  * Base repository class.
@@ -13,9 +12,9 @@ public abstract class JomRepository {
     // final Context mContext;
     final AppExecutors mAppExecutors;
 
-    public JomRepository(JOMApp application) {
+    public JomRepository(AppExecutors appExecutors) {
         // mContext = application.getApplicationContext();
-        mAppExecutors = application.getAppExecutors();
+        mAppExecutors = appExecutors;
     }
 
     protected AppExecutors getAppExecutors() {

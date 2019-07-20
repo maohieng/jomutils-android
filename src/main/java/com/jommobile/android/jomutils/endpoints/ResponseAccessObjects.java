@@ -1,5 +1,7 @@
 package com.jommobile.android.jomutils.endpoints;
 
+import androidx.annotation.NonNull;
+
 import com.google.api.client.json.GenericJson;
 import com.google.api.client.util.DateTime;
 import com.jommobile.android.jomutils.db.BaseEntity;
@@ -28,7 +30,7 @@ public final class ResponseAccessObjects {
         //no instance
     }
 
-    public static Image createImageModel(Object imageResp) throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+    private static Image createImageModel(@NonNull Object imageResp) throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
         Class<?> imageRespClass = imageResp.getClass();
         Image img = new Image();
         img.setImage((String) imageRespClass.getMethod("getLink").invoke(imageResp));
@@ -37,11 +39,11 @@ public final class ResponseAccessObjects {
         return img;
     }
 
-    public static Object createInnerClientObject(Class<?> innerModelClass, Object innerRespObj) throws InstantiationException, IllegalAccessException, NoSuchMethodException, InvocationTargetException {
+    private static Object createInnerClientObject(Class<?> innerModelClass, Object innerRespObj) throws InstantiationException, IllegalAccessException, NoSuchMethodException, InvocationTargetException {
         Class<?> innerRespClass = innerRespObj.getClass();
 
         Object innerModelObj = innerModelClass.newInstance();
-
+        // TODO: 7/19/2019 this will fail the whole if there's a unmatched field
         Method[] innerObjMethods = innerModelObj.getClass().getMethods();
         for (Method innerObjMethod : innerObjMethods) {
             String methodName = innerObjMethod.getName();
@@ -61,7 +63,7 @@ public final class ResponseAccessObjects {
         return createInnerClientObject(innerModelClass, innerRespObj);
     }
 
-    public static <M> M createImageResponse(Class<M> imgResponseClass, Image imageModel) throws InstantiationException, IllegalAccessException, NoSuchMethodException, InvocationTargetException {
+    private static <M> M createImageResponse(Class<M> imgResponseClass, Image imageModel) throws InstantiationException, IllegalAccessException, NoSuchMethodException, InvocationTargetException {
         M image = imgResponseClass.newInstance();
         imgResponseClass.getMethod("setLink", String.class).invoke(image, imageModel.getImage());
         imgResponseClass.getMethod("setThumbnail", String.class).invoke(image, imageModel.getThumbnail());
@@ -72,15 +74,18 @@ public final class ResponseAccessObjects {
     // TODO: 6/10/2019 change method name to createClientModel
 
     @SuppressWarnings("unchecked")
-    public static <R extends GenericJson, M extends BaseEntity> M createClientObject(Class<M> modelClass, R resp, Class<?>... innerTypes) {
+    static <R extends GenericJson, M extends BaseEntity> M createClientObject(Class<M> modelClass, R resp, Class<?>... innerTypes) {
         final Class<R> rClass = (Class<R>) resp.getClass();
 
         M model = null;
+        try {
+            model = modelClass.newInstance();
+        } catch (IllegalAccessException | InstantiationException e) {
+            throw new IllegalArgumentException("Class " + modelClass.getSimpleName() + " must have a default constructor.");
+        }
 
         // Required fields
         try {
-            model = modelClass.newInstance();
-
             Long id = (Long) rClass.getMethod("getId").invoke(resp);
 
             Object created = rClass.getMethod("getCreatedDate").invoke(resp);
@@ -123,110 +128,126 @@ public final class ResponseAccessObjects {
             model.setModifiedDate(modifiedDate);
             model.setSync(true);
 
-        } catch (IllegalAccessException | InstantiationException | NoSuchMethodException | InvocationTargetException e) {
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        } catch (InvocationTargetException e) {
             e.printStackTrace();
         } catch (ParseException e) {
+            e.printStackTrace();
+        } catch (NoSuchMethodException e) {
             e.printStackTrace();
         }
 
         // Note: trying to match any fields, need to catch exceptions for each of them.
 
         // Optional fields
-        if (model != null) {
-            String flavor = null;
-            try {
-                flavor = (String) rClass.getMethod("getFlavor").invoke(resp);
-            } catch (IllegalAccessException e) {
-                e.printStackTrace();
-            } catch (InvocationTargetException e) {
-                e.printStackTrace();
-            } catch (NoSuchMethodException e) {
-                e.printStackTrace();
-            }
+        String flavor = null;
+        try {
+            flavor = (String) rClass.getMethod("getFlavor").invoke(resp);
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        } catch (InvocationTargetException e) {
+            e.printStackTrace();
+        } catch (NoSuchMethodException e) {
+            e.printStackTrace();
+        }
 
-            model.setFlavor(FlavorConverter.toFlavor(flavor));
+        model.setFlavor(FlavorConverter.toFlavor(flavor));
 
-            boolean deleted = false;
+        boolean deleted = false;
+        try {
+            deleted = (Boolean) rClass.getMethod("isDeleted").invoke(resp);
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        } catch (InvocationTargetException e) {
+            e.printStackTrace();
+        } catch (NoSuchMethodException e) {
             try {
-                deleted = (Boolean) rClass.getMethod("isDeleted").invoke(resp);
-            } catch (IllegalAccessException e) {
-                e.printStackTrace();
-            } catch (InvocationTargetException e) {
-                e.printStackTrace();
-            } catch (NoSuchMethodException e) {
+                deleted = (Boolean) rClass.getMethod("getDeleted").invoke(resp);
+            } catch (IllegalAccessException e1) {
+                e1.printStackTrace();
+            } catch (InvocationTargetException e1) {
+                e1.printStackTrace();
+            } catch (NoSuchMethodException e1) {
                 try {
-                    deleted = (Boolean) rClass.getMethod("getDeleted").invoke(resp);
-                } catch (IllegalAccessException e1) {
-                    e1.printStackTrace();
-                } catch (InvocationTargetException e1) {
-                    e1.printStackTrace();
-                } catch (NoSuchMethodException e1) {
+                    deleted = !((Boolean) rClass.getMethod("getActive").invoke(resp));
+                } catch (IllegalAccessException e2) {
+                    e2.printStackTrace();
+                } catch (InvocationTargetException e2) {
+                    e2.printStackTrace();
+                } catch (NoSuchMethodException e2) {
                     try {
-                        deleted = !((Boolean) rClass.getMethod("getActive").invoke(resp));
-                    } catch (IllegalAccessException e2) {
-                        e2.printStackTrace();
-                    } catch (InvocationTargetException e2) {
-                        e2.printStackTrace();
-                    } catch (NoSuchMethodException e2) {
-                        try {
-                            deleted = !((Boolean) rClass.getMethod("isActive").invoke(resp));
-                        } catch (IllegalAccessException e3) {
-                            e3.printStackTrace();
-                        } catch (InvocationTargetException e3) {
-                            e3.printStackTrace();
-                        } catch (NoSuchMethodException e3) {
-                            e3.printStackTrace();
-                        }
+                        deleted = !((Boolean) rClass.getMethod("isActive").invoke(resp));
+                    } catch (IllegalAccessException e3) {
+                        e3.printStackTrace();
+                    } catch (InvocationTargetException e3) {
+                        e3.printStackTrace();
+                    } catch (NoSuchMethodException e3) {
+                        e3.printStackTrace();
                     }
                 }
             }
+        }
 
-            model.setDeleted(deleted);
+        model.setDeleted(deleted);
 
+        // Other fields that matchable
+        Method[] methods = modelClass.getMethods();
+        for (Method setMethod : methods) {
+            String name = setMethod.getName();
+            if (name.startsWith("set")) {
+                boolean skipCheck = name.equals("setId")
+                        || name.equals("setCreatedDate")
+                        || name.equals("setModifiedDate")
+                        || name.equals("setFlavor")
+                        || name.equals("setSync")
+                        || name.equals("setDeleted");
 
-            // Other fields that matchable
-            Method[] methods = modelClass.getMethods();
-            for (int i = 0; i < methods.length; i++) {
-                Method method = methods[i];
-                String name = method.getName();
-                if (name.startsWith("set")) {
-                    boolean skipCheck = name.equals("setId")
-                            || name.equals("setCreatedDate")
-                            || name.equals("setModifiedDate")
-                            || name.equals("setFlavor")
-                            || name.equals("setSync")
-                            || name.equals("setDeleted");
+                if (!skipCheck) {
+                    final String firstCapFieldName = name.substring(3);
 
-                    if (!skipCheck) {
-                        final String fieldName = name.substring(3);
+                    try {
+                        Object respFieldValue = rClass.getMethod("get" + firstCapFieldName).invoke(resp);
 
-                        try {
-                            Object rField = rClass.getMethod("get" + fieldName).invoke(resp);
-
-                            if (fieldName.equals("Image")) {
-                                method.invoke(model, createImageModel(rField));
-                            } else if (rField instanceof DateTime) {
-                                method.invoke(model, DateTimeConverter.toDate((DateTime) rField));
-                            } else if (!(rField instanceof String) && !(rField instanceof Number)) {
-                                Class<?> innerModelType = null;
+                        if (respFieldValue != null) {
+                            if (firstCapFieldName.equals("Image")) {
+                                setMethod.invoke(model, createImageModel(respFieldValue));
+                            } else if (respFieldValue instanceof DateTime) {
+                                setMethod.invoke(model, DateTimeConverter.toDate((DateTime) respFieldValue));
+                            } else if ((respFieldValue instanceof String) || (respFieldValue instanceof Number)) {
+                                // else if (!(respFieldValue instanceof String) && !(respFieldValue instanceof Number))
+                                // try to cast other object that you may know from server and local model
+                                setMethod.invoke(model, respFieldValue);
+                            } else {
+                                Object innerObject = null;
                                 if (innerTypes != null && innerTypes.length > 0) {
+                                    Class<?> innerModelType = null;
+                                    // Find inner class type if provided
                                     for (Class<?> innerType : innerTypes) {
-                                        if (innerType.getSimpleName().equals(fieldName)) {
+                                        if (innerType.getSimpleName().equals(firstCapFieldName)) {
                                             innerModelType = innerType;
+                                            break;
                                         }
+                                    }
+
+                                    // Get an instance
+                                    if (innerModelType != null) {
+                                        innerObject = createInnerClientObject(innerModelType, respFieldValue);
                                     }
                                 }
 
-                                method.invoke(model, innerModelType != null ? createInnerModel(innerModelType, rField) : null);
-                            } else {
-                                // else if (!(rField instanceof String) && !(rField instanceof Number))
-                                // try to cast other object that you may know from server and local model
-                                method.invoke(model, rField);
+                                setMethod.invoke(model, innerObject == null ? respFieldValue : innerObject);
                             }
-
-                        } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException | IllegalArgumentException | InstantiationException e) {
-                            e.printStackTrace();
                         }
+
+                    } catch (IllegalAccessException e) {
+                        e.printStackTrace();
+                    } catch (InvocationTargetException e) {
+                        e.printStackTrace();
+                    } catch (InstantiationException e) {
+                        e.printStackTrace();
+                    } catch (NoSuchMethodException e) {
+                        e.printStackTrace();
                     }
                 }
             }
@@ -241,7 +262,7 @@ public final class ResponseAccessObjects {
     }
 
     @SuppressWarnings("unchecked")
-    public static <R extends GenericJson, M extends BaseModel> R createResponse(Class<R> responseClass, M model, Class<?>... innerTypes) {
+    static <R extends GenericJson, M extends BaseModel> R createResponse(Class<R> responseClass, M model, Class<?>... innerTypes) {
         // TODO: 1/11/19 need to be tested
         final Class<M> mClass = (Class<M>) model.getClass();
 
@@ -310,7 +331,7 @@ public final class ResponseAccessObjects {
         return createClientObjectList(modelClass, responses);
     }
 
-    public static <R extends GenericJson, M extends BaseEntity> List<M> createClientObjectList(Class<M> modelClass, List<R> responses) {
+    static <R extends GenericJson, M extends BaseEntity> List<M> createClientObjectList(Class<M> modelClass, List<R> responses) {
         List<M> modelList = new ArrayList<>();
 
         for (R response : responses) {

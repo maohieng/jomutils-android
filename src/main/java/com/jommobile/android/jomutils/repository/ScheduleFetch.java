@@ -9,15 +9,15 @@ import com.jommobile.android.jomutils.Logs;
 import java.util.Objects;
 
 @Beta
-class ScheduleFetchOption implements NetworkFetchOption {
+class ScheduleFetch implements NetworkFetchOption {
 
-    private static final String TAG = Logs.makeTag(ScheduleFetchOption.class);
+    private static final String TAG = Logs.makeTag(ScheduleFetch.class);
 
     private static long lastFetchSeconds;
 
     private final long timeGapSeconds;
 
-    ScheduleFetchOption(long timeGapSeconds) {
+    ScheduleFetch(long timeGapSeconds) {
         this.timeGapSeconds = timeGapSeconds;
     }
 
@@ -43,11 +43,11 @@ class ScheduleFetchOption implements NetworkFetchOption {
             return true;
         }
 
-        if (!(obj instanceof ScheduleFetchOption)) {
+        if (!(obj instanceof ScheduleFetch)) {
             return false;
         }
 
-        ScheduleFetchOption schedule = (ScheduleFetchOption) obj;
+        ScheduleFetch schedule = (ScheduleFetch) obj;
         return this.timeGapSeconds == schedule.timeGapSeconds;
     }
 

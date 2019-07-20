@@ -1,13 +1,16 @@
 package com.jommobile.android.jomutils.repository;
 
-import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-class AlwaysFetchOption implements NetworkFetchOption {
-
+/**
+ * This class is used for ...
+ *
+ * @autor MAO Hieng 7/19/2019
+ */
+public class NeverFetch implements NetworkFetchOption {
     @Override
     public boolean needFetchNow() {
-        return true;
+        return false;
     }
 
     @Override
@@ -15,17 +18,11 @@ class AlwaysFetchOption implements NetworkFetchOption {
         if (this == obj)
             return true;
 
-        return obj instanceof AlwaysFetchOption;
+        return obj instanceof NeverFetch && !((NeverFetch) obj).needFetchNow();
     }
 
     @Override
     public int hashCode() {
         return 31 + super.hashCode();
-    }
-
-    @NonNull
-    @Override
-    public String toString() {
-        return "NetworkFetchOption:Always";
     }
 }

@@ -1,9 +1,9 @@
 package com.jommobile.android.jomutils.ui.widget;
 
 
-import java.util.List;
-
 import androidx.recyclerview.widget.RecyclerView;
+
+import java.util.List;
 
 /**
  * @author MAO Hieng on 8/6/16.
@@ -16,8 +16,13 @@ public abstract class DataListRecyclerAdapter<T, VH extends RecyclerView.ViewHol
         return mData;
     }
 
-    public void setData(List<T> mData) {
-        this.mData = mData;
+    public void notifyNewDataSetChanged(List<T> newData) {
+        if (mData != null && !mData.isEmpty()) {
+            mData.clear();
+        }
+
+        mData = newData;
+        notifyDataSetChanged();
     }
 
     @Override

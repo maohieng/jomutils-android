@@ -6,11 +6,15 @@ public final class FetchOptions {
         //no instance
     }
 
-    public static AlwaysFetchOption always() {
-        return new AlwaysFetchOption();
+    public static AlwaysFetch always() {
+        return new AlwaysFetch();
     }
 
-    public static ScheduleFetchOption schedule(long timeGapSeconds) {
-        return new ScheduleFetchOption(timeGapSeconds);
+    public static ScheduleFetch schedule(long timeGapSeconds) {
+        return new ScheduleFetch(timeGapSeconds);
+    }
+
+    public static NeverFetch never() {
+        return new NeverFetch();
     }
 }

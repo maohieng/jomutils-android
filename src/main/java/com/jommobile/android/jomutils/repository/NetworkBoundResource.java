@@ -1,15 +1,16 @@
 package com.jommobile.android.jomutils.repository;
 
-import com.jommobile.android.jomutils.AppExecutors;
-import com.jommobile.android.jomutils.Logs;
-
-import java.util.concurrent.Executor;
-
 import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
 import androidx.annotation.WorkerThread;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MediatorLiveData;
+
+import com.jommobile.android.jomutils.AppExecutors;
+import com.jommobile.android.jomutils.Logs;
+
+import java.util.Objects;
+import java.util.concurrent.Executor;
 
 /**
  * A generic class that can provide a resource backed by both the sqlite database and the network.
@@ -26,18 +27,6 @@ public abstract class NetworkBoundResource<RESULT, NR> {
     @MainThread
     public NetworkBoundResource(AppExecutors appExecutors) {
         this.appExecutors = appExecutors;
-
-        result.setValue(Resource.Factory.loading());
-
-        final LiveData<RESULT> dbSource = loadFromDb();
-        result.addSource(dbSource, data -> {
-            result.removeSource(dbSource);
-            if (shouldFetch(data)) {
-                fetchFromNetwork(dbSource);
-            } else {
-                result.addSource(dbSource, result -> setValue(Resource.Factory.success(result)));
-            }
-        });
     }
 
     private void setValue(Resource<RESULT> newValue) {
@@ -46,10 +35,24 @@ public abstract class NetworkBoundResource<RESULT, NR> {
         }
     }
 
-    public LiveData<Resource<RESULT>> asLiveData() {
-        return result;
+    public BoundResource<RESULT> bind() {
+        result.setValue(Resource.Factory.loading());
+
+        final LiveData<RESULT> dbSource = loadFromDb();
+        Objects.requireNonNull(dbSource, "Required a data source from database, loadFromDb() must not return null.");
+        result.addSource(dbSource, data -> {
+            result.removeSource(dbSource);
+            if (shouldFetch(data)) {
+                fetchFromNetwork(dbSource);
+            } else {
+                result.addSource(dbSource, result -> setValue(Resource.Factory.success(result)));
+            }
+        });
+
+        return () -> result;
     }
 
+    @NonNull
     @MainThread
     protected abstract LiveData<RESULT> loadFromDb();
 
@@ -60,6 +63,7 @@ public abstract class NetworkBoundResource<RESULT, NR> {
         final Executor mainThread = appExecutors.mainThread();
 
         final LiveData<Resource<NR>> callSource = createNetworkCall();
+        Objects.requireNonNull(callSource, "Required a network call data source, createNetworkCall() must not return null.");
 
         // we re-attach dbSource as a new source, it will dispatch its latest value quickly
         result.addSource(dbSource, newData -> setValue(Resource.Factory.loading()));
@@ -103,6 +107,7 @@ public abstract class NetworkBoundResource<RESULT, NR> {
         });
     }
 
+    @NonNull
     @MainThread
     protected abstract LiveData<Resource<NR>> createNetworkCall();
 
