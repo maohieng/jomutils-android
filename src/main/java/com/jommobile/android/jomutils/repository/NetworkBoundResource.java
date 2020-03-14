@@ -17,44 +17,25 @@ import java.util.concurrent.Executor;
  *
  * @author MAO Hieng on 1/8/19.
  */
-public abstract class NetworkBoundResource<RESULT, NR> {
+public abstract class NetworkBoundResource<RESULT, NR> extends DataBoundResource<RESULT> {
 
     private static final String TAG = Logs.makeTag(NetworkBoundResource.class);
 
-    private final AppExecutors appExecutors;
-    private final MediatorLiveData<Resource<RESULT>> result = new MediatorLiveData<>();
-
     @MainThread
     public NetworkBoundResource(AppExecutors appExecutors) {
-        this.appExecutors = appExecutors;
+        super(appExecutors);
     }
 
-    private void setValue(Resource<RESULT> newValue) {
-        if (!result.getValue().equals(newValue)) {
-            result.setValue(newValue);
-        }
-    }
-
+    @Override
     public BoundResource<RESULT> bind() {
-        result.setValue(Resource.Factory.loading());
-
-        final LiveData<RESULT> dbSource = loadFromDb();
-        Objects.requireNonNull(dbSource, "Required a data source from database, loadFromDb() must not return null.");
-        result.addSource(dbSource, data -> {
-            result.removeSource(dbSource);
+        return bind((dbSource, data) -> {
             if (shouldFetch(data)) {
                 fetchFromNetwork(dbSource);
             } else {
                 result.addSource(dbSource, result -> setValue(Resource.Factory.success(result)));
             }
         });
-
-        return () -> result;
     }
-
-    @NonNull
-    @MainThread
-    protected abstract LiveData<RESULT> loadFromDb();
 
     @MainThread
     protected abstract boolean shouldFetch(RESULT data);
